@@ -1,0 +1,36 @@
+def acc(defs):
+    end = defs.find('span')
+    length = 4
+    if end == -1:
+        end = defs.find('span)')
+        length = 5
+        if end == -1:
+            end = defs.find('scale)')
+            length = 6
+    return defs[:end+length]
+
+def table(defs):
+    parameters = {}
+
+    parameters['Accuracy'] = acc(defs)
+    parameters['Dial Size and Case Material']=dial(defs)
+    return parameters
+
+
+
+
+
+def dial():
+    pass
+
+
+def range():
+    pass
+
+
+str1 = 'AccuracyDialSizeandCaseMaterialRange'
+str2 = 'Standard: Class 1,6, EN 837-3 ±1,6% of scale) 100 mm or 160 mm 304 stainless steel' \
+       ' - 316L stainless steel optional' \
+       '	Vacuum and Compound, -6 ... 0 mbar up to 0 ... 600 mbar'
+if __name__ == "__main__":
+    print(table(str2))

@@ -1,0 +1,153 @@
+from bs4 import BeautifulSoup
+import requests
+import json
+import time
+import csv
+import openpyxl
+
+
+class WrongFile(BaseException):
+    pass
+
+
+class Html:
+    """Создается экземпляр класса, далее пользуемся методами"""
+
+    def get_content(self, url, params=None):
+        self.url = url
+        self.params = params
+        response = requests.get(self.url, headers=HEADERS, params=self.params, timeout=5)
+        if response.status_code == 200:
+            self.content = response.text
+            time.sleep(3)
+        else:
+            print('Error')
+
+    def get_from_file(self, filename):
+        try:
+            with open(filename, 'r') as file:
+                self.content = file.read()
+        except FileNotFoundError as err:
+            print('Неправильное имя файла ', err)
+            raise WrongFile
+
+    def parse(self):
+        """Start to parse html file, returning dictionary with elements"""
+        print('Start parsing ')
+        soup = BeautifulSoup(self.content, 'html.parser')
+        data = soup.find_all('div', class_="omega thirteen columns")
+        self.pagename = soup.find('h1', class_='product-title').get_text().replace('/','')
+        picts = soup.find_all('div', class_="alpha three columns textcenter")
+        # print(picts)
+        self.newdict = {}
+        # print(data)
+        pictlst = []
+        for item in picts:
+            pict = item.find('img').get('src')
+            pictlst.append(pict)
+        k = 0  # переменная индекс списка piclst
+        for item in data:
+            title = item.find('p').get_text()
+            url = item.find('a').get('href')
+            lst = []
+            acchead = item.find('thead').find_next('tr').find_next('th').get_text()
+            stylehead = item.find('thead').find_next('tr').find_next('th'). \
+                find_next('th').get_text()
+            rangehead = item.find('thead').find_next('tr').find_next('th'). \
+                find_next('th').find_next('th').get_text()
+            accbody = item.find('tbody').find_next('td').get_text()
+            stylebody = item.find('tbody').find_next('td').find_next('td').get_text()
+            rangebody = item.find('tbody').find_next('td').find_next('td'). \
+                find_next('td').get_text()
+            lst.append(
+                {acchead: accbody,
+                 stylehead: stylebody,
+                 rangehead: rangebody,
+                 'url': url,
+                 'picturl': + pictlst[k]})# убрал ссылку
+            k += 1  # прибавляем чтобы идти по списке
+            self.newdict[title] = lst
+        print('Parsing finished'+self.pagename)
+
+        return self.newdict
+
+    def to_json(self):
+        """ Method for the saving json file with the results dict"""
+        print('Создаем .json файл')
+        with open(self.pagename + '.json', 'w', encoding='utf8') as write_file:
+            json.dump(self.newdict, write_file, indent=2)
+        print('Создание файла json выполнено')
+
+    def to_csv(self):
+        """Create csv file"""
+        print('Start to create .csv file')
+        with open(self.pagename + '.csv', 'w', newline='', encoding='utf8') as csvfile:
+            columns = ['Model', 'Accuracy', 'Dial Size and Style', 'Range', 'Url', 'Picture']
+            writer = csv.writer(csvfile, delimiter=',')
+
+            # writer.writeheader()
+            writer.writerow(columns)
+            counter = 0
+            for key in self.newdict:
+                writer.writerow(
+                    [key,
+                     self.newdict[key][0][list(self.newdict[key][0].keys())[0]],
+                     self.newdict[key][0][list(self.newdict[key][0].keys())[1]],
+                     self.newdict[key][0][list(self.newdict[key][0].keys())[2]],
+                     self.newdict[key][0][list(self.newdict[key][0].keys())[3]],
+                     self.newdict[key][0][list(self.newdict[key][0].keys())[4]],
+
+                     ]
+                )
+        print('Creating .csv file is finished')
+
+    def to_excel(self):
+        """Create excel file"""
+        print('Start to make .xlsx file')
+        file = openpyxl.Workbook()
+        """Создание формы нового файла"""
+        sheetsource = file.active
+        sheetsource.title = self.pagename
+        columns = ['Model', 'Accuracy', 'Dial Size and Style', 'Range', 'Url', 'Picture']
+        sheetsource['A1'] = columns[0]
+        sheetsource['B1'] = columns[1]
+        sheetsource['C1'] = columns[2]
+        sheetsource['D1'] = columns[3]
+        sheetsource['E1'] = columns[4]
+        sheetsource['F1'] = columns[4]
+        k = 2
+        columnslst = ['A', 'B', 'C', 'D', 'E', 'F']
+        for key in self.newdict:
+            print(key)
+            sheetsource[columnslst[0] + str(k)] = key.strip()
+            sheetsource[columnslst[1] + str(k)] = self.newdict[key][0][list(self.newdict[key][0].keys())[0]]
+            sheetsource[columnslst[2] + str(k)] = self.newdict[key][0][list(self.newdict[key][0].keys())[1]]
+            sheetsource[columnslst[3] + str(k)] = self.newdict[key][0][list(self.newdict[key][0].keys())[2]]
+            sheetsource[columnslst[4] + str(k)] = self.newdict[key][0][list(self.newdict[key][0].keys())[3]]
+            sheetsource[columnslst[5] + str(k)] = self.newdict[key][0][list(self.newdict[key][0].keys())[4]]
+            k+=1
+        file.save(self.pagename + '.xlsx')
+        print('Creating .xlsx is finished, filename '+self.pagename)
+
+
+URL =# убрал
+HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0)'
+                         ' Gecko/20100101 Firefox/71.0', 'accept': '*/*'}
+
+new = Html()
+done = [34, 62, 38, 36, 57, 35, 37, 73, 45, 70, 46, 47, 39, 40,
+             65, 66,50, 49, 48, 51, 53, 64, 54, 61, 67, 68, 55,]
+gidnumber = [56]
+bad = [72]
+for k in gidnumber:
+    print('Запуск пасинга gid = '+str(k))
+    payload = {'gid': k}
+    new.get_content(URL, payload)
+#new.get_from_file('process.html')
+    newdict = new.parse()
+    new.to_csv()
+    new.to_json()
+    new.to_excel()
+
+# TODO посмотреть верхние пределы списков, по странице 74
+# TODO сделать так чтобы хорошие страницы отправлялись в список done

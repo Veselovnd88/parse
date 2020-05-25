@@ -80,11 +80,14 @@ class Html:
         
         
         
-    def parse_card(self):
+        def parse_card(self):
         print('Start parsing cards')
         soup = BeautifulSoup(self.content, 'html.parser')
-        self.pagename=soup.find('div', class_="center-column-content product-detail").find_next('h1').text
+        self.pagename = soup.find('div', class_="center-column-content product-detail").find_next('h1').text
         basic = soup.find('div', id="overview-tab-content")
+        "Блок полей для парсинга"
+        bigphotos = soup.find('ul', class_='slides').find_next('a').get('href')
+        smallphotos = soup.find('ul', class_='slides').find_next('li').get('data-thumb')
         description = basic.find_next('p').text
         features = basic.find_next('h5').text
         features_desr = basic.find_next('ul')
@@ -96,25 +99,28 @@ class Html:
         speclst = []
         for i in spec_descr:
             speclst.append(i.text)
-        appl = soup.find('div',id="applications-tab-content").\
-            text.replace('/','-').replace('\\','-')
+        appl = soup.find('div', id="applications-tab-content"). \
+            text.replace('/', '-').replace('\\', '-')
         """ Этот блок приводит в нормальный вид описание сфер применения"""
         begin = 0
         fields = ''
 
         for i in range(len(appl)):
-            if appl[i].islower() and appl[i+1].isupper():
-                fields += appl[begin+1:i+1]+', '
+            if appl[i].islower() and appl[i + 1].isupper():
+                fields += appl[begin + 1:i + 1] + ', '
                 begin = i
-        fields+=appl[begin+1:]
+        fields += appl[begin + 1:]
 
-        self.newdict = {self.pagename:{
-            features:featureslst,
-            spec:speclst,
-            'Application':fields.strip()
+        self.newdict = {self.pagename: {
+            'Description': description,
+            features: featureslst,
+            spec: speclst,
+            'Application': fields.strip(),
+            'Large_picture': bigphotos,
+            'Small_picture': smallphotos
         }
         }
-        print('Parsing card '+self.pagename+' completed')
+        print('Parsing card ' + self.pagename + ' completed')
         return self.newdict
         # парсинг карточки, to_json с ним работает
         # TODO - конверация в csv и excel

@@ -16,8 +16,6 @@ class Html:
     def __init__(self, prefix=None):
         self.prefix = prefix
 
-
-
     def get_content(self, url, params=None):
         HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0)'
                                  ' Gecko/20100101 Firefox/71.0', 'accept': '*/*'}
@@ -115,24 +113,22 @@ class Html:
             find_next('a', class_='detail-button').get('href')
         spaces = datasheet.count(' ')
         cleands = datasheet
-        if spaces > 0: # меняем пробелы на %20 чтобы файл скачивался
+        if spaces > 0:  # меняем пробелы на %20 чтобы файл скачивался
             for i in range(spaces):
                 cleands = datasheet.replace(' ', '%20')
-
 
         self.newdict = {self.pagename: {
             'Description': description,
             features: featuresstr,
             spec: specstr,
             'Application': fields.strip(),
-            'Large_picture': self.prefix + bigphotos,
-            'Small_picture': self.prefix + smallphotos,
+            'Large_picture': self.prefix[:-3] + bigphotos,
+            'Small_picture': self.prefix[:-3] + smallphotos,
             'Datasheet': self.prefix[:-3] + cleands
         }
         }
         print('Parsing card ' + self.pagename + ' completed')
         return self.newdict
-        # TODO - конверация  и excel
 
     def to_json(self):
         """ Method for the saving json file with the results dict"""
@@ -146,23 +142,15 @@ class Html:
         print('Start to create .csv file')
         dictkeys = list(self.newdict[self.pagename].keys())
 
-        """
-        Превратил этот блок в функцию
-        columns = []
-        meaning = []
-        for i in range(len(dictkeys)):
-            columns.append(dictkeys[i])
-            meaning.append(self.newdict[self.pagename][dictkeys[i]])
-        """
         with open(self.pagename + '.csv', 'w', newline='', encoding='utf8') as csvfile:
             writer = csv.writer(csvfile, delimiter=',')
             # writer.writeheader()
             writer.writerow(self.table_columns(dictkeys))
-            counter = 0
+
             writer.writerow(self.table_meaning(dictkeys))
         print('Creating .csv file is finished')
 
-    def table_columns(self,lst):
+    def table_columns(self, lst):
         """ Функция делает шапку таблицы"""
         columns = []
         meaning = []
@@ -171,7 +159,7 @@ class Html:
             meaning.append(self.newdict[self.pagename][lst[i]])
         return columns
 
-    def table_meaning(self,lst):
+    def table_meaning(self, lst):
         """Функция заполняет значения таблицы под шапкой"""
         columns = []
         meaning = []
@@ -180,22 +168,35 @@ class Html:
             meaning.append(self.newdict[self.pagename][lst[i]])
         return meaning
 
-    def to_excel_product(self, groupname = self.pagename,qnt=0):
-        """Create excel file"""
+    def excel_list_of_products(self, groupname: str, gidnumbers: list):
+        """Принимает имя группы и список номеров -gid для файлов
+         Парсинг из скачанных страниц, без get
+         Складывает все значения в одну табличку"""
         print('Start to make .xlsx file')
+
         file = openpyxl.Workbook()
         """Создание формы нового файла"""
         sheetsource = file.active
         sheetsource.title = groupname
-        dictkeys = list(self.newdict[self.pagename].keys())
-        head = self.table_columns(dictkeys)
-        fill = self.table_meaning(dictkeys)
-        for i in range(len(head)):
-            sheetsource.cell(row=1, column=i+1).value = head[i]
-            sheetsource.cell(row=2+qnt,column=i+1).value=fill[i]
+        num = 2
+        for i in range(len(gidnumbers)):
+            filename = str(gidnumbers[i]) + '.html'
+            self.get_from_file(filename)
+            self.parse_card()
+            dictkeys = list(self.newdict[self.pagename].keys())
+            head = self.table_columns(dictkeys)
+            fill = self.table_meaning(dictkeys)
+            sheetsource.cell(row=1, column=1).value = 'Model name'
+            for k in range(len(head)):
+                if sheetsource.cell(row=1, column=1).value is None:
+                    sheetsource.cell(row=1, column=k + 2).value = head[k]
+                else:
+                    sheetsource.cell(row=1, column=k + 2).value = head[k]
+                sheetsource.cell(row=num + i, column=1).value = self.pagename
+                sheetsource.cell(row=num + i, column=k + 2).value = fill[k]
 
-        file.save(groupname+ '.xlsx')
-        print('Creating .xlsx is finished, filename ' + self.pagename)
+        file.save(groupname + '.xlsx')
+        print('Creating .xlsx is finished, filename ' + groupname)
 
     def to_csv_line(self):
         """Create csv file"""
@@ -204,9 +205,8 @@ class Html:
             columns = ['Model', 'Accuracy', 'Dial Size and Style', 'Range', 'Url', 'Picture']
             writer = csv.writer(csvfile, delimiter=',')
 
-            # writer.writeheader()
             writer.writerow(columns)
-            counter = 0
+
             for key in self.newdict:
                 writer.writerow(
                     [key,
@@ -247,26 +247,3 @@ class Html:
             k += 1
         file.save(self.pagename + '.xlsx')
         print('Creating .xlsx is finished, filename ' + self.pagename)
-
-
-"""
-web = 'https://www.ashcroft.eu/en'
-URL = 'https://www.ashcroft.eu/en/products/products.html'
-HEADERS = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0)'
-                         ' Gecko/20100101 Firefox/71.0', 'accept': '*/*'}
-
-new = Html()
-done = [34, 62, 38, 36, 57, 35, 37, 73, 45, 70, 46, 47, 39, 40,
-             65, 66,50, 49, 48, 51, 53, 64, 54, 61, 67, 68, 55,]
-gidnumber = [56]
-bad = [72]
-
-#new.get_from_file('process.html')
-    newdict = new.parse()
-    new.to_csv()
-    new.to_json()
-    new.to_excel()
-
-# TODO посмотреть верхние пределы списков, по странице 74
-# TODO сделать так чтобы хорошие страницы отправлялись в список done
-"""

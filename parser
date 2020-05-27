@@ -5,6 +5,64 @@ import time
 import csv
 import openpyxl
 
+class Excel_file:
+    """
+    Преобразование результатов парсинга страниц в таблицу эксель;
+    На вход принимаются лист - имена файлов(без расширения)
+    название группы - будет названием файла и названием листа книги эксель
+    и объект класса Html, просто созданный через инит Html
+    Код запускается сразу при создании экземпляра
+    """
+
+    def __init__(self, lst, groupname, parsed):
+        self.parsed = parsed
+        self.lst = lst
+        self.groupname = groupname
+
+        print('Start to make .xlsx file')
+        file = openpyxl.Workbook()
+        """Создание формы нового файла"""
+        sheetsource = file.active
+        sheetsource.title = self.groupname
+        num = 2  # номер строки с которой начинается заполнение данными
+        for i in range(len(lst)):
+            filename = str(lst[i]) + '.html'
+            self.parsed.get_from_file(filename)  # метод открывает файл
+            newdict = self.parsed.parse_card()  # метод парсит файл
+            pagename = list(newdict.keys())[0]  # имя модели - ключ главного словаря
+            dictkeys = list(newdict[pagename].keys())  # характеристики - ключи словаря
+            head = self.table_making(dictkeys, newdict, pagename, 1)
+            fill = self.table_making(dictkeys, newdict, pagename, 0)
+            sheetsource.cell(row=1, column=1).value = 'Model name'
+            for k in range(len(head)):
+                if sheetsource.cell(row=1, column=1).value is None:
+                    sheetsource.cell(row=1, column=k + 2).value = head[k]
+                else:
+                    sheetsource.cell(row=1, column=k + 2).value = head[k]
+                sheetsource.cell(row=num + i, column=1).value = pagename
+                sheetsource.cell(row=num + i, column=k + 2).value = fill[k]
+
+        file.save(groupname + '.xlsx')
+        print('Creating .xlsx is finished, filename ' + groupname)
+
+    def table_making(self, keys: list, dictionary: dict, pagename: str, option=1):
+        """
+        Функция возвращает список - шапку - ключи, и список - значения ключей;
+        Принимает ключи - список из ключей
+        Словарь - словарь, получившийся после парсинга из которого будет создаваться заполнение по ключам;
+        Название страницы - для заполнения значений ключей
+        Параметр option - если 1 (по умолч., то создается шапка, если 0, то заполнение   
+        """
+        if option:
+            columns = []
+            for i in range(len(keys)):
+                columns.append(keys[i])
+            return columns
+        else:
+            meaning = []
+            for i in range(len(keys)):
+                meaning.append(dictionary[pagename][keys[i]])
+            return meaning
 
 class WrongFile(BaseException):
     pass

@@ -6,6 +6,7 @@ import csv
 import openpyxl
 import time
 
+
 class Excel_file:
     """
     Преобразование результатов парсинга страниц в таблицу эксель;
@@ -15,7 +16,7 @@ class Excel_file:
     Код запускается сразу при создании экземпляра
     """
 
-    def __init__(self, lst, groupname, parsed,file_or_web=1, web=None):
+    def __init__(self, lst, groupname, parsed, file_or_web=1, web=None):
         self.parsed = parsed
         self.lst = lst
         self.groupname = groupname
@@ -46,7 +47,7 @@ class Excel_file:
         else:
             for i in range(len(lst)):
 
-                self.parsed.get_content(web,{'gid=':lst[i]})  # метод открывает страницу
+                self.parsed.get_content(web, {'pid': lst[i]})  # метод открывает страницу
                 newdict = self.parsed.parse_card()  # метод парсит файл
                 pagename = list(newdict.keys())[0]  # имя модели - ключ главного словаря
                 dictkeys = list(newdict[pagename].keys())  # характеристики - ключи словаря
@@ -102,6 +103,7 @@ class Html:
         response = requests.get(self.url, headers=HEADERS, params=self.params, timeout=5)
         if response.status_code == 200:
             self.content = response.text
+
             time.sleep(3)
         else:
             print('Error')
